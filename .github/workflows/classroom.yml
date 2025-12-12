@@ -1,0 +1,52 @@
+name: Autograding Tests
+'on':
+- push
+- repository_dispatch
+permissions:
+  checks: write
+  actions: read
+  contents: read
+jobs:
+  run-autograding-tests:
+    runs-on: ubuntu-latest
+    if: github.actor != 'github-classroom[bot]'
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+    - name: Сложение (add)
+      id: add
+      uses: classroom-resources/autograding-io-grader@v1
+      with:
+        test-name: Сложение (add)
+        setup-command: ''
+        command: python classroom_task.py
+        input: |-
+          5
+          +
+          3
+        expected-output: '15'
+        comparison-method: exact
+        timeout: 10
+        max-score: 10
+    - name: Вычитание (sub)
+      id: sub
+      uses: classroom-resources/autograding-io-grader@v1
+      with:
+        test-name: Вычитание (sub)
+        setup-command: ''
+        command: python classroom_task.py
+        input: |-
+          15
+          -
+          3
+        expected-output: '12'
+        comparison-method: exact
+        timeout: 10
+        max-score: 10
+    - name: Autograding Reporter
+      uses: classroom-resources/autograding-grading-reporter@v1
+      env:
+        ADD_RESULTS: "${{steps.add.outputs.result}}"
+        SUB_RESULTS: "${{steps.sub.outputs.result}}"
+      with:
+        runners: add,sub
