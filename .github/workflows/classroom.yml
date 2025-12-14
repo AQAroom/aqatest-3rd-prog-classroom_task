@@ -7,242 +7,511 @@ permissions:
   actions: read
   contents: read
 jobs:
-  run-autograding-tests:
+  # JOB 1: Проверка структуры класса
+  run-structure-tests:
+    name: Проверка структуры BankAccount
     runs-on: ubuntu-latest
     if: github.actor != 'github-classroom[bot]'
+    
     steps:
     - name: Checkout code
       uses: actions/checkout@v4
     
-    # Тесты с уникальными ID для сбора результатов
-    - name: Сложение
-      id: add_test
-      uses: classroom-resources/autograding-io-grader@v1
+    - name: Setup Python
+      uses: actions/setup-python@v4
       with:
-        test-name: Сложение
-        setup-command: 'add'
-        command: python task.py
-        input: |
-          5
-          +
-          3
-        expected-output: '8'
-        comparison-method: exact
-        timeout: 5
-        max-score: 15
+        python-version: '3.x'
     
-    - name: Вычитание
-      id: sub_test
-      uses: classroom-resources/autograding-io-grader@v1
-      with:
-        test-name: Вычитание
-        setup-command: 'sub'
-        command: python task.py
-        input: |
-          10
-          -
-          4
-        expected-output: '6'
-        comparison-method: exact
-        timeout: 5
-        max-score: 15
-    
-    - name: Умножение
-      id: mul_test
-      uses: classroom-resources/autograding-io-grader@v1
-      with:
-        test-name: Умножение
-        setup-command: 'mul'
-        command: python task.py
-        input: |
-          7
-          *
-          6
-        expected-output: '42'
-        comparison-method: exact
-        timeout: 5
-        max-score: 15
-    
-    - name: Деление
-      id: div_test
-      uses: classroom-resources/autograding-io-grader@v1
-      with:
-        test-name: Деление
-        setup-command: 'div'
-        command: python task.py
-        input: |
-          15
-          /
-          3
-        expected-output: '5'
-        comparison-method: exact
-        timeout: 5
-        max-score: 15
-    
-    - name: Степень
-      id: pow_test
-      uses: classroom-resources/autograding-io-grader@v1
-      with:
-        test-name: Степень
-        setup-command: ''
-        command: python task.py
-        input: |
-          2
-          **
-          3
-        expected-output: '8'
-        comparison-method: exact
-        timeout: 5
-        max-score: 15
-    
-    - name: Деление на ноль
-      id: div_zero_test
-      uses: classroom-resources/autograding-io-grader@v1
-      with:
-        test-name: Деление на ноль
-        setup-command: ''
-        command: python task.py
-        input: |
-          10
-          /
-          0
-        expected-output: error
-        comparison-method: contains
-        timeout: 5
-        max-score: 15
-    
-    - name: Неизвестная операция
-      id: unknown_test
-      uses: classroom-resources/autograding-io-grader@v1
-      with:
-        test-name: Неизвестная операция
-        setup-command: ''
-        command: python task.py
-        input: |
-          5
-          %
-          3
-        expected-output: неизвестная операция
-        comparison-method: contains
-        timeout: 5
-        max-score: 10
-    
-    - name: Autograding Reporter
-      id: reporter
-      uses: classroom-resources/autograding-grading-reporter@v1
-      with:
-        runners: |
-          {
-            "add": {
-              "run": "python task.py",
-              "input": "5\n+\n3\n",
-              "output": "8",
-              "points": 15
-            },
-            "sub": {
-              "run": "python task.py",
-              "input": "10\n-\n4\n",
-              "output": "6",
-              "points": 15
-            },
-            "mul": {
-              "run": "python task.py",
-              "input": "7\n*\n6\n",
-              "output": "42",
-              "points": 15
-            },
-            "div": {
-              "run": "python task.py",
-              "input": "15\n/\n3\n",
-              "output": "5",
-              "points": 15
-            },
-            "pow": {
-              "run": "python task.py",
-              "input": "2\n^\n3\n",
-              "output": "8",
-              "points": 15
-            },
-            "div_zero": {
-              "run": "python task.py",
-              "input": "10\n/\n0\n",
-              "output": "error",
-              "points": 15
-            },
-            "unknown": {
-              "run": "python task.py",
-              "input": "5\n%\n3\n",
-              "output": "неизвестная операция",
-              "points": 10
-            }
-          }
-        max-total-score: 100
-    
-    - name: Generate Summary
+    - name: Создание тестового скрипта
       run: |
-        # Получаем общие результаты из reporter
-        TOTAL_POINTS="${{ steps.reporter.outputs.totalPoints || 100 }}"
-        MAX_POINTS="${{ steps.reporter.outputs.maxPoints || 100 }}"
+        cat > test_structure.py << 'EOF'
+        #!/usr/bin/env python3
+        import ast
+        import sys
         
-        # Собираем результаты из каждого теста
-        ADD_SCORE="${{ steps.add_test.outputs.score || 15 }}"
-        SUB_SCORE="${{ steps.sub_test.outputs.score || 15 }}"
-        MUL_SCORE="${{ steps.mul_test.outputs.score || 15 }}"
-        DIV_SCORE="${{ steps.div_test.outputs.score || 15 }}"
-        POW_SCORE="${{ steps.pow_test.outputs.score || 15 }}"
-        DIV_ZERO_SCORE="${{ steps.div_zero_test.outputs.score || 15 }}"
-        UNKNOWN_SCORE="${{ steps.unknown_test.outputs.score || 10 }}"
+        def check_structure():
+            """Проверяет структуру класса BankAccount через AST"""
+            try:
+                with open('task.py', 'r', encoding='utf-8') as f:
+                    code = f.read()
+            except FileNotFoundError:
+                print("ERROR: Файл task.py не найден")
+                return False
+            
+            try:
+                tree = ast.parse(code)
+            except SyntaxError as e:
+                print(f"ERROR: Синтаксическая ошибка: {e}")
+                return False
+            
+            # Находим класс
+            bank_class = None
+            for node in ast.walk(tree):
+                if isinstance(node, ast.ClassDef) and node.name == 'BankAccount':
+                    bank_class = node
+                    break
+            
+            if not bank_class:
+                print("ERROR: Класс BankAccount не найден")
+                return False
+            
+            # Проверяем методы
+            methods_found = []
+            for item in bank_class.body:
+                if isinstance(item, ast.FunctionDef):
+                    methods_found.append(item.name)
+            
+            required_methods = ["__init__", "add", "status", "withdraw"]
+            missing_methods = [m for m in required_methods if m not in methods_found]
+            
+            if missing_methods:
+                print(f"ERROR: Отсутствуют методы: {', '.join(missing_methods)}")
+                return False
+            
+            # Находим __init__ и проверяем атрибуты
+            init_method = None
+            for item in bank_class.body:
+                if isinstance(item, ast.FunctionDef) and item.name == "__init__":
+                    init_method = item
+                    break
+            
+            if not init_method:
+                print("ERROR: Метод __init__ не найден")
+                return False
+            
+            # Проверяем атрибуты
+            attributes_found = set()
+            for node in ast.walk(init_method):
+                if isinstance(node, ast.Assign):
+                    for target in node.targets:
+                        if isinstance(target, ast.Attribute):
+                            attributes_found.add(target.attr)
+            
+            required_attrs = ["account_number", "balance"]
+            missing_attrs = [a for a in required_attrs if a not in attributes_found]
+            
+            if missing_attrs:
+                print(f"ERROR: Отсутствуют атрибуты: {', '.join(missing_attrs)}")
+                return False
+            
+            # Проверяем вызов status() в __init__
+            status_called = False
+            for node in ast.walk(init_method):
+                if (isinstance(node, ast.Call) and 
+                    isinstance(node.func, ast.Attribute) and 
+                    node.func.attr == "status"):
+                    status_called = True
+                    break
+            
+            if not status_called:
+                print("ERROR: Метод status() не вызывается в __init__")
+                return False
+            
+            return True
         
-        # Добавляем статусы (предполагаем, что все пройдены)
-        ADD_STATUS="✅"
-        SUB_STATUS="✅"
-        MUL_STATUS="✅"
-        DIV_STATUS="✅"
-        POW_STATUS="✅"
-        DIV_ZERO_STATUS="✅"
-        UNKNOWN_STATUS="✅"
+        if __name__ == "__main__":
+            if check_structure():
+                print("SUCCESS: Все проверки структуры пройдены")
+                sys.exit(0)
+            else:
+                sys.exit(1)
+        EOF
+    
+    - name: Проверка структуры класса
+      id: structure_test
+      uses: classroom-resources/autograding-io-grader@v1
+      with:
+        test-name: Проверка структуры BankAccount
+        command: python test_structure.py
+        expected-output: 'SUCCESS: Все проверки структуры пройдены'
+        comparison-method: contains
+        timeout: 10
+        max-score: 50
+
+  # JOB 2: Проверка ввода-вывода
+  run-io-tests:
+    name: Проверка ввода-вывода BankAccount
+    runs-on: ubuntu-latest
+    needs: run-structure-tests
+    if: github.actor != 'github-classroom[bot]'
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+    
+    - name: Setup Python
+      uses: actions/setup-python@v4
+      with:
+        python-version: '3.x'
+    
+    - name: Создание тестового скрипта
+      run: |
+        cat > test_bank.py << 'EOF'
+        #!/usr/bin/env python3
+        """
+        Тестовый скрипт для BankAccount
+        Читает два числа из stdin:
+        - начальный баланс
+        - сумма операции (положительная - пополнение, отрицательная - снятие)
+        """
+        import sys
         
-        echo "## 📊 Результаты тестирования" >> $GITHUB_STEP_SUMMARY
+        # Импортируем класс из файла студента
+        try:
+            # Добавляем текущую директорию в путь
+            import os
+            import sys as sys_module
+            sys_module.path.insert(0, os.getcwd())
+            
+            from task import BankAccount
+        except ImportError as e:
+            print(f"ERROR: Не удалось импортировать класс BankAccount: {e}")
+            sys.exit(1)
+        except Exception as e:
+            print(f"ERROR: Ошибка при импорте: {e}")
+            sys.exit(1)
+        
+        def main():
+            try:
+                # Читаем входные данные
+                data = sys.stdin.read().strip().split()
+                if len(data) != 2:
+                    print("ERROR: Ожидается два числа: начальный баланс и сумма операции")
+                    return
+                
+                initial_balance = int(data[0])
+                operation = int(data[1])
+                
+                # Создаем счет
+                account = BankAccount("test_account", initial_balance)
+                
+                # Выполняем операцию
+                if operation >= 0:
+                    account.add(operation)
+                else:
+                    account.withdraw(-operation)  # Убираем минус
+                
+                # Выводим итоговый баланс
+                account.status()
+                
+            except ValueError:
+                print("ERROR: Входные данные должны быть целыми числами")
+            except Exception as e:
+                print(f"ERROR: Неожиданная ошибка: {e}")
+        
+        if __name__ == "__main__":
+            main()
+        EOF
+    
+    # Тест 1: Пополнение счета
+    - name: Тест 1 - Пополнение счета
+      id: test1
+      uses: classroom-resources/autograding-io-grader@v1
+      with:
+        test-name: Тест 1 - Пополнение счета
+        command: python test_bank.py
+        input: |
+          1000
+          200
+        expected-output: |
+          Баланс счёта: 1000 единиц
+          На счет зачислено: 200 единиц
+          Баланс счёта: 1200 единиц
+        comparison-method: exact
+        timeout: 5
+        max-score: 17
+    
+    # Тест 2: Снятие средств
+    - name: Тест 2 - Снятие средств
+      id: test2
+      uses: classroom-resources/autograding-io-grader@v1
+      with:
+        test-name: Тест 2 - Снятие средств
+        command: python test_bank.py
+        input: |
+          1000
+          -300
+        expected-output: |
+          Баланс счёта: 1000 единиц
+          Со счета снято: 300 единиц
+          Баланс счёта: 700 единиц
+        comparison-method: exact
+        timeout: 5
+        max-score: 17
+    
+    # Тест 3: Попытка снятия при недостатке средств
+    - name: Тест 3 - Недостаточно средств
+      id: test3
+      uses: classroom-resources/autograding-io-grader@v1
+      with:
+        test-name: Тест 3 - Недостаточно средств
+        command: python test_bank.py
+        input: |
+          1000
+          -1100
+        expected-output: |
+          Баланс счёта: 1000 единиц
+          Недостаточно средств на счете
+          Баланс счёта: 1000 единиц
+        comparison-method: exact
+        timeout: 5
+        max-score: 16
+
+  # JOB 3: Генерация отчета
+  generate-report:
+    name: Генерация отчета
+    runs-on: ubuntu-latest
+    needs: [run-structure-tests, run-io-tests]
+    if: always()
+    
+    steps:
+    - name: Extract Scores
+      id: extract_scores
+      run: |
+        # Функция для декодирования результатов из base64
+        decode_and_get_score() {
+          local encoded_result="$1"
+          local test_name="$2"
+          local default_score="${3:-0}"
+          
+          if [ -z "$encoded_result" ] || [ "$encoded_result" = "null" ]; then
+            echo "$default_score"
+            return
+          fi
+          
+          # Декодируем JSON и извлекаем score
+          local score=$(echo "$encoded_result" | base64 -d | python3 -c "
+import sys, json
+try:
+    data = json.load(sys.stdin)
+    if 'tests' in data and len(data['tests']) > 0:
+        print(data['tests'][0]['score'])
+    else:
+        print('$default_score')
+except Exception as e:
+    print('$default_score')
+" 2>/dev/null || echo "$default_score")
+          
+          echo "$score"
+        }
+        
+        # Извлекаем баллы из каждого теста
+        STRUCTURE_SCORE=$(decode_and_get_score '${{ needs.run-structure-tests.outputs.result }}' "structure" 0)
+        TEST1_SCORE=$(decode_and_get_score '${{ needs.run-io-tests.outputs.test1-result }}' "test1" 0)
+        TEST2_SCORE=$(decode_and_get_score '${{ needs.run-io-tests.outputs.test2-result }}' "test2" 0)
+        TEST3_SCORE=$(decode_and_get_score '${{ needs.run-io-tests.outputs.test3-result }}' "test3" 0)
+        
+        # Сохраняем в outputs
+        echo "structure_score=$STRUCTURE_SCORE" >> $GITHUB_OUTPUT
+        echo "test1_score=$TEST1_SCORE" >> $GITHUB_OUTPUT
+        echo "test2_score=$TEST2_SCORE" >> $GITHUB_OUTPUT
+        echo "test3_score=$TEST3_SCORE" >> $GITHUB_OUTPUT
+        
+        # Вычисляем итоги
+        TOTAL_POINTS=$((STRUCTURE_SCORE + TEST1_SCORE + TEST2_SCORE + TEST3_SCORE))
+        echo "total_points=$TOTAL_POINTS" >> $GITHUB_OUTPUT
+        
+        # Также сохраняем в переменные окружения
+        echo "STRUCTURE_SCORE=$STRUCTURE_SCORE" >> $GITHUB_ENV
+        echo "TEST1_SCORE=$TEST1_SCORE" >> $GITHUB_ENV
+        echo "TEST2_SCORE=$TEST2_SCORE" >> $GITHUB_ENV
+        echo "TEST3_SCORE=$TEST3_SCORE" >> $GITHUB_ENV
+        echo "TOTAL_POINTS=$TOTAL_POINTS" >> $GITHUB_ENV
+    
+    - name: Generate Test Report
+      run: |
+        # Используем переменные из предыдущего шага
+        STRUCTURE_SCORE="${STRUCTURE_SCORE:-0}"
+        TEST1_SCORE="${TEST1_SCORE:-0}"
+        TEST2_SCORE="${TEST2_SCORE:-0}"
+        TEST3_SCORE="${TEST3_SCORE:-0}"
+        TOTAL_POINTS="${TOTAL_POINTS:-0}"
+        
+        # Максимальные баллы
+        STRUCTURE_MAX=50
+        TEST1_MAX=17
+        TEST2_MAX=17
+        TEST3_MAX=16
+        MAX_POINTS=$((STRUCTURE_MAX + TEST1_MAX + TEST2_MAX + TEST3_MAX))
+        
+        # Определяем статусы
+        get_status() {
+          local score="$1"
+          local max="$2"
+          if [ "$score" -eq "$max" ]; then
+            echo "✅"
+          elif [ "$score" -gt 0 ]; then
+            echo "⚠️"
+          else
+            echo "❌"
+          fi
+        }
+        
+        STRUCTURE_STATUS=$(get_status "$STRUCTURE_SCORE" "$STRUCTURE_MAX")
+        TEST1_STATUS=$(get_status "$TEST1_SCORE" "$TEST1_MAX")
+        TEST2_STATUS=$(get_status "$TEST2_SCORE" "$TEST2_MAX")
+        TEST3_STATUS=$(get_status "$TEST3_SCORE" "$TEST3_MAX")
+        
+        # Генерация отчета
+        echo "## 🏦 Результаты проверки: Класс BankAccount" >> $GITHUB_STEP_SUMMARY
         echo "" >> $GITHUB_STEP_SUMMARY
-        echo "### 🧪 Детализация тестов" >> $GITHUB_STEP_SUMMARY
+        
+        # Раздел 1: Проверка структуры
+        echo "### 📋 Проверка структуры класса" >> $GITHUB_STEP_SUMMARY
         echo "" >> $GITHUB_STEP_SUMMARY
-        echo "| Тест | Баллы | Максимум | Статус |" >> $GITHUB_STEP_SUMMARY
-        echo "|------|-------|----------|--------|" >> $GITHUB_STEP_SUMMARY
-        echo "| **Сложение** | $ADD_SCORE | 15 | $ADD_STATUS |" >> $GITHUB_STEP_SUMMARY
-        echo "| **Вычитание** | $SUB_SCORE | 15 | $SUB_STATUS |" >> $GITHUB_STEP_SUMMARY
-        echo "| **Умножение** | $MUL_SCORE | 15 | $MUL_STATUS |" >> $GITHUB_STEP_SUMMARY
-        echo "| **Деление** | $DIV_SCORE | 15 | $DIV_STATUS |" >> $GITHUB_STEP_SUMMARY
-        echo "| **Степень** | $POW_SCORE | 15 | $POW_STATUS |" >> $GITHUB_STEP_SUMMARY
-        echo "| **Деление на ноль** | $DIV_ZERO_SCORE | 15 | $DIV_ZERO_STATUS |" >> $GITHUB_STEP_SUMMARY
-        echo "| **Неизвестная операция** | $UNKNOWN_SCORE | 10 | $UNKNOWN_STATUS |" >> $GITHUB_STEP_SUMMARY
+        echo "| Проверка | Баллы | Максимум | Статус |" >> $GITHUB_STEP_SUMMARY
+        echo "|----------|-------|----------|--------|" >> $GITHUB_STEP_SUMMARY
+        echo "| **Наличие класса BankAccount** | $STRUCTURE_SCORE | $STRUCTURE_MAX | $STRUCTURE_STATUS |" >> $GITHUB_STEP_SUMMARY
+        echo "" >> $GITHUB_STEP_SUMMARY
+        echo "**Что проверяется:**" >> $GITHUB_STEP_SUMMARY
+        echo "- Наличие класса BankAccount" >> $GITHUB_STEP_SUMMARY
+        echo "- Методы: `__init__`, `add`, `status`, `withdraw`" >> $GITHUB_STEP_SUMMARY
+        echo "- Атрибуты: `account_number`, `balance`" >> $GITHUB_STEP_SUMMARY
+        echo "- Вызов `status()` в `__init__()`" >> $GITHUB_STEP_SUMMARY
+        echo "" >> $GITHUB_STEP_SUMMARY
+        
+        # Раздел 2: Тесты ввода-вывода
+        echo "### 🧪 Тесты ввода-вывода" >> $GITHUB_STEP_SUMMARY
+        echo "" >> $GITHUB_STEP_SUMMARY
+        echo "| Тест | Входные данные | Ожидаемый вывод | Баллы | Максимум | Статус |" >> $GITHUB_STEP_SUMMARY
+        echo "|------|----------------|-----------------|-------|----------|--------|" >> $GITHUB_STEP_SUMMARY
+        
+        # Тест 1
+        echo "| **Пополнение счета** | 1000<br>200 | Баланс: 1000<br>Зачислено: 200<br>Баланс: 1200 | $TEST1_SCORE | $TEST1_MAX | $TEST1_STATUS |" >> $GITHUB_STEP_SUMMARY
+        
+        # Тест 2
+        echo "| **Снятие средств** | 1000<br>-300 | Баланс: 1000<br>Снято: 300<br>Баланс: 700 | $TEST2_SCORE | $TEST2_MAX | $TEST2_STATUS |" >> $GITHUB_STEP_SUMMARY
+        
+        # Тест 3
+        echo "| **Недостаточно средств** | 1000<br>-1100 | Баланс: 1000<br>Недостаточно средств<br>Баланс: 1000 | $TEST3_SCORE | $TEST3_MAX | $TEST3_STATUS |" >> $GITHUB_STEP_SUMMARY
+        
+        echo "" >> $GITHUB_STEP_SUMMARY
+        
+        # Итоговая статистика
+        echo "### 📊 Итоговая статистика" >> $GITHUB_STEP_SUMMARY
+        echo "" >> $GITHUB_STEP_SUMMARY
+        echo "**Всего баллов:** **$TOTAL_POINTS / $MAX_POINTS**" >> $GITHUB_STEP_SUMMARY
         echo "" >> $GITHUB_STEP_SUMMARY
         
         # Расчет процента
-        PERCENTAGE=$((TOTAL_POINTS * 100 / MAX_POINTS))
-        
-        echo "### 🏆 Итоговая статистика" >> $GITHUB_STEP_SUMMARY
-        echo "" >> $GITHUB_STEP_SUMMARY
-        echo "**Всего баллов:** $TOTAL_POINTS / $MAX_POINTS" >> $GITHUB_STEP_SUMMARY
-        echo "" >> $GITHUB_STEP_SUMMARY
+        if [ "$MAX_POINTS" -gt 0 ]; then
+          PERCENTAGE=$((TOTAL_POINTS * 100 / MAX_POINTS))
+        else
+          PERCENTAGE=0
+        fi
         
         # Прогресс-бар
         echo "**Прогресс:**" >> $GITHUB_STEP_SUMMARY
         echo "" >> $GITHUB_STEP_SUMMARY
-        echo "<div style='background: #e1e4e8; border-radius: 4px; height: 20px; width: 100%;'>" >> $GITHUB_STEP_SUMMARY
-        echo "  <div style='background: #2ea44f; border-radius: 4px; height: 100%; width: $PERCENTAGE%;'></div>" >> $GITHUB_STEP_SUMMARY
-        echo "</div>" >> $GITHUB_STEP_SUMMARY
+        echo '<div style="background: #e1e4e8; border-radius: 4px; height: 20px; width: 100%;">' >> $GITHUB_STEP_SUMMARY
+        echo '  <div style="background: #2ea44f; border-radius: 4px; height: 100%; width: '$PERCENTAGE'%;"></div>' >> $GITHUB_STEP_SUMMARY
+        echo '</div>' >> $GITHUB_STEP_SUMMARY
         echo "" >> $GITHUB_STEP_SUMMARY
         
         # Сообщение в зависимости от результата
         if [ "$TOTAL_POINTS" -eq "$MAX_POINTS" ]; then
           echo "🎉 **Отличная работа! Все тесты пройдены!**" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "Класс BankAccount реализован корректно и проходит все проверки." >> $GITHUB_STEP_SUMMARY
         elif [ "$PERCENTAGE" -ge 80 ]; then
-          echo "👍 **Хороший результат! Почти все тесты пройдены.**" >> $GITHUB_STEP_SUMMARY
+          echo "👍 **Хороший результат!**" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "Большинство проверок пройдены. Обратите внимание на ошибки в таблицах выше." >> $GITHUB_STEP_SUMMARY
         elif [ "$PERCENTAGE" -ge 60 ]; then
           echo "⚠️ **Есть над чем поработать.**" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "Проверьте структуру класса и тестовые примеры." >> $GITHUB_STEP_SUMMARY
         else
           echo "❌ **Нужно серьезно поработать над заданием.**" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "Рекомендуется пересмотреть реализацию класса BankAccount." >> $GITHUB_STEP_SUMMARY
         fi
         
         echo "" >> $GITHUB_STEP_SUMMARY
+        echo "---" >> $GITHUB_STEP_SUMMARY
         echo "*Автоматическая проверка завершена*" >> $GITHUB_STEP_SUMMARY
+
+    - name: Autograding Reporter
+      id: reporter
+      uses: classroom-resources/autograding-grading-reporter@v1
+      env:
+        STRUCTURE_TEST_RESULTS: "${{ needs.run-structure-tests.outputs.result }}"
+        TEST1_RESULTS: "${{ needs.run-io-tests.outputs.test1-result }}"
+        TEST2_RESULTS: "${{ needs.run-io-tests.outputs.test2-result }}"
+        TEST3_RESULTS: "${{ needs.run-io-tests.outputs.test3-result }}"
+      with:
+        runners: run-structure-tests,test1,test2,test3
+
+  # JOB 4: Линтеры (дополнительно)
+  run-linters:
+    runs-on: ubuntu-latest
+    name: Проверка качества кода
+    needs: [run-structure-tests, run-io-tests]
+    if: always()
+    
+    steps:
+    - uses: actions/checkout@v4
+
+    - name: Set up Python
+      uses: actions/setup-python@v5
+      with:
+        python-version: "3.10"
+
+    - name: Install linters
+      run: |
+        echo "## 🔍 Code Quality Analysis" >> $GITHUB_STEP_SUMMARY
+        echo "### Информация для улучшения кода" >> $GITHUB_STEP_SUMMARY
+        echo "" >> $GITHUB_STEP_SUMMARY
+      
+        echo "📦 Installing linters..." >> $GITHUB_STEP_SUMMARY
+        pip install pylint flake8 ruff -q
+        echo "✅ Установлены: Pylint, Flake8, Ruff" >> $GITHUB_STEP_SUMMARY
+        echo "" >> $GITHUB_STEP_SUMMARY
+
+    - name: Run linters
+      run: |
+        # Проверяем только task.py
+        if [ ! -f "task.py" ]; then
+          echo "⚠️ Файл task.py не найден." >> $GITHUB_STEP_SUMMARY
+          exit 0
+        fi
+      
+        echo "### 🐍 PyLint Results" >> $GITHUB_STEP_SUMMARY
+        echo '```' >> $GITHUB_STEP_SUMMARY
+        pylint task.py --exit-zero --score=yes 2>&1 >> $GITHUB_STEP_SUMMARY || echo "PyLint failed" >> $GITHUB_STEP_SUMMARY
+        echo '```' >> $GITHUB_STEP_SUMMARY
+        echo "" >> $GITHUB_STEP_SUMMARY
+      
+        echo "### ✨ Flake8 Results" >> $GITHUB_STEP_SUMMARY
+        echo '```' >> $GITHUB_STEP_SUMMARY
+        flake8 task.py --count --exit-zero --statistics 2>&1 >> $GITHUB_STEP_SUMMARY || echo "Flake8 failed" >> $GITHUB_STEP_SUMMARY
+        echo '```' >> $GITHUB_STEP_SUMMARY
+        echo "" >> $GITHUB_STEP_SUMMARY
+      
+        echo "### ⚡ Ruff Results" >> $GITHUB_STEP_SUMMARY
+        echo '```' >> $GITHUB_STEP_SUMMARY
+        ruff check task.py --statistics --exit-zero 2>&1 >> $GITHUB_STEP_SUMMARY || echo "Ruff failed" >> $GITHUB_STEP_SUMMARY
+        echo '```' >> $GITHUB_STEP_SUMMARY
+        echo "" >> $GITHUB_STEP_SUMMARY
+      
+        # Сводка
+        echo "### 📊 Summary" >> $GITHUB_STEP_SUMMARY
+        echo "| Tool | Result |" >> $GITHUB_STEP_SUMMARY
+        echo "|------|--------|" >> $GITHUB_STEP_SUMMARY
+      
+        # PyLint score
+        pylint_score=$(pylint task.py --exit-zero --score=yes 2>&1 | grep -o 'rated at [0-9.]*' | cut -d' ' -f3 || echo "N/A")
+        echo "| PyLint | $pylint_score/10 |" >> $GITHUB_STEP_SUMMARY
+      
+        # Flake8 count
+        flake8_errors=$(flake8 task.py --count 2>/dev/null | tail -1 || echo "0")
+        echo "| Flake8 | $flake8_errors ошибки |" >> $GITHUB_STEP_SUMMARY
+      
+        # Ruff count
+        ruff_errors=$(ruff check task.py --count --exit-zero 2>&1 | grep -Eo '[0-9]+ error' | head -1 | cut -d' ' -f1 || echo "0")
+        echo "| Ruff | $ruff_errors ошибки |" >> $GITHUB_STEP_SUMMARY
+      
+        echo "" >> $GITHUB_STEP_SUMMARY
+        echo "---" >> $GITHUB_STEP_SUMMARY
+        echo "*Примечание:*" >> $GITHUB_STEP_SUMMARY
+        echo "*Проверка качества кода может повлиять на оценку учителя и помогает улучшить код*" >> $GITHUB_STEP_SUMMARY
